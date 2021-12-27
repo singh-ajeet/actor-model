@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Actor<T, R> {
+public final class Actor<T, R> {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
     
     private final Mailbox<Tuple<T, R>> queue;

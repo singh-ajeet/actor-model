@@ -13,7 +13,6 @@ import java.util.logging.Logger;
 public final class ActorSystem {
     private final Logger log = Logger.getLogger(ActorSystem.class.getName());
     private final ExecutorService executorService;
-    //private final int BATCH_SIZE = 10;
     private final Map<String, Actor> actorRegistry = new ConcurrentHashMap<>();
     private volatile boolean isStopped = false;
 
@@ -27,29 +26,6 @@ public final class ActorSystem {
 
         this.executorService = Executors.newFixedThreadPool(threadPoolSize);
     }
-
-/*
-    public <T, R> Actor<T, R> create(Action<T, R> action) {
-        return _createActor(action, 0);
-    }
-
-    public <T, R> Actor<T, R> create(Action<T, R> action, int actorMessageQueueSize) {
-        if(isStopped)
-            throw new DeadException("Shuting down actor system");
-
-        if(actorMessageQueueSize <= 0)
-            throw new IllegalArgumentException("Specified actor message queue must be greater then 0.");
-
-        return _createActor(action, actorMessageQueueSize);
-    }
-
-    private <T, R> Actor<T, R> _createActor(Action<T, R> behavior, int actorMessageQueueSize) {
-        String actorId = generateActorId();
-        Actor<T, R> actor =  new Actor<T, R>(behavior, actorId, actorMessageQueueSize, executorService, BATCH_SIZE);
-        actorRegistry.put(actorId, actor);
-        return actor;
-    }
-*/
 
     /**
      * Stop Actor System, it will gracefully stop all actors
@@ -78,7 +54,7 @@ public final class ActorSystem {
         }
     }
 
-    static class ActorBuilder<T, R> {
+    static final class ActorBuilder<T, R> {
 
         private final ActorSystem actorSystem;
         private final Action<T, R> action;
