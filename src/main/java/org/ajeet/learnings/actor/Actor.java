@@ -1,6 +1,7 @@
 package org.ajeet.learnings.actor;
 
 import org.ajeet.learnings.actor.commons.DeadException;
+import org.ajeet.learnings.actor.commons.Tuple;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -11,7 +12,7 @@ import java.util.logging.Logger;
 public class Actor<T, R> {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
     
-    private final FIFOMailbox<Tuple<T, R>> queue;
+    private final Mailbox<Tuple<T, R>> queue;
     private final Action<T, R> action;
     public final String actorId;
     private final ExecutorService executorService;
@@ -22,7 +23,7 @@ public class Actor<T, R> {
 
     Actor(Action<T, R> action,
           String actorId,
-          int actorMessageQueueSize,
+          Mailbox<Tuple<T, R>> queue,
           ExecutorService executorService,
           int batchSize) {
 
@@ -31,11 +32,7 @@ public class Actor<T, R> {
         this.actorId = actorId;
         this.executorService = executorService;
         this.batchSize = batchSize;
-
-        if(actorMessageQueueSize == 0)
-            this.queue = new FIFOMailbox<Tuple<T, R>>();
-        else
-            this.queue = new FIFOMailbox<Tuple<T, R>>(actorMessageQueueSize);
+        this.queue = queue;
     }
 
     public CompletableFuture<R> send(Message<T> msg) throws DeadException {
@@ -46,7 +43,10 @@ public class Actor<T, R> {
         CompletableFuture<R> future = new CompletableFuture<>();
         Runnable runnable = () -> {
             int size = queue.getSize();
-            queue.add(new Tuple<>(msg, result -> future.complete(result)));
+
+            Consumer<R> consumer = result -> future.complete(result);
+            Tuple<T, R> tuple = new Tuple(msg, consumer);
+            queue.add(tuple);
             if (size == 0)
                 processMessage();
         };
@@ -83,19 +83,5 @@ public class Actor<T, R> {
     public void close(){
         LOG.log(Level.INFO, "Shutting down " + this);
         isStopped = true;
-    }
-
-    private static class Tuple<T, R> {
-        private final Message<T> message;
-        private final Consumer<R> consumer;
-
-        private Tuple(Message<T> message, Consumer<R> consumer) {
-            this.message = message;
-            this.consumer = consumer;
-        }
-
-        private void consume(R result){
-            consumer.accept(result);
-        }
     }
 }

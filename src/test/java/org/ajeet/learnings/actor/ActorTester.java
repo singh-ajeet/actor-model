@@ -13,7 +13,7 @@ public class ActorTester {
 
     @BeforeAll
     public static void setup() {
-        actorSystem = new ActorSystem();
+        actorSystem = new ActorSystem(10);
     }
 
     @AfterAll
@@ -37,7 +37,11 @@ public class ActorTester {
             }
         };
 
-        Actor<String, Integer> actor = actorSystem.create(behavior);
+
+        Actor<String, Integer> actor = actorSystem.actorBuilderWithAction(behavior)
+                .withActorId("MyActor")
+                .withMessageBatchSize(5)
+                .build();
 
         CompletableFuture<Integer> future1 = actor.send(new Message<>(actor.actorId, "Something"));
         CompletableFuture<Integer> future2 = actor.send(new Message<>(actor.actorId, "Someone"));
@@ -62,7 +66,10 @@ public class ActorTester {
             }
         };
 
-        Actor<String, Void> actor = actorSystem.create(behavior);
+        Actor<String, Void> actor = actorSystem.actorBuilderWithAction(behavior)
+                .withActorId("MyAnotherActor")
+                .withMessageBatchSize(5)
+                .build();
 
         CompletableFuture<Void> future1 = actor.send(new Message<>(actor.actorId, "Something"));
         CompletableFuture<Void> future2 = actor.send(new Message<>(actor.actorId, "Someone"));

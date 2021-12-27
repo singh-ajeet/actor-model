@@ -1,8 +1,8 @@
 package org.ajeet.learnings.actor;
 
-public interface Mailbox<Msg> {
-    public Msg remove();
-    public boolean add(Msg message);
+public interface Mailbox<T> {
+    public T remove();
+    public boolean add(T message);
     public void clear();
     public int getSize();
 }
