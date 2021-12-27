@@ -1,36 +1,73 @@
 package org.ajeet.learnings.actor;
 
+import org.ajeet.learnings.actor.commons.DeadException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.*;
 
 public class ActorTester {
     private static ActorSystem actorSystem;
 
     @BeforeAll
-    public static void setup(){
+    public static void setup() {
         actorSystem = new ActorSystem();
     }
 
+    @AfterAll
+    public static void cleanup(){
+        actorSystem.stop();
+    }
+
     @Test
-    public void testActor() throws DeadException, InterruptedException {
-        Behavior<String> behavior = new Behavior<String>() {
+    public void testActorWithReturn() throws DeadException, InterruptedException, DeadException, ExecutionException {
+        Action<String, Integer> behavior = new Action<String, Integer>() {
             @Override
-            public boolean onReceive(Actor<String> self, String msg) {
-                System.out.println("Got: " + msg);
-                return !msg.equals("stop");
+            public Integer onMessage(Message<String> msg) {
+                System.out.println("Got input: " + msg);
+                return msg.input.length();
             }
 
             @Override
-            public void onException(Actor self, Exception e) {}
+            public Integer onException(Throwable ex) {
+                ex.printStackTrace();
+                return -1;
+            }
         };
 
-        Actor<String> actor = actorSystem.createAndStart(behavior);
+        Actor<String, Integer> actor = actorSystem.create(behavior);
 
-        actor.send("hello");
-        actor.send("world");
+        CompletableFuture<Integer> future1 = actor.send(new Message<>(actor.actorId, "Something"));
+        CompletableFuture<Integer> future2 = actor.send(new Message<>(actor.actorId, "Someone"));
 
-        Thread.sleep(1000);
+        Assertions.assertEquals(9, future1.get());
+        Assertions.assertEquals(7, future2.get());
+    }
 
-        actor.send("stop");
+    @Test
+    public void testActorWithVoid() throws DeadException, InterruptedException, DeadException, ExecutionException {
+        Action<String, Void> behavior = new Action<String, Void>() {
+            @Override
+            public Void onMessage(Message<String> msg) {
+                System.out.println("Got input: " + msg);
+                return null;
+            }
+
+            @Override
+            public Void onException(Throwable ex) {
+                ex.printStackTrace();
+                return null;
+            }
+        };
+
+        Actor<String, Void> actor = actorSystem.create(behavior);
+
+        CompletableFuture<Void> future1 = actor.send(new Message<>(actor.actorId, "Something"));
+        CompletableFuture<Void> future2 = actor.send(new Message<>(actor.actorId, "Someone"));
+
+        Assertions.assertNull(future1.get());
+        Assertions.assertNull(future2.get());
     }
 }

@@ -1,5 +1,7 @@
 package org.ajeet.learnings.actor;
 
+import org.ajeet.learnings.actor.commons.DeadException;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,25 +13,28 @@ import java.util.logging.Logger;
 
 public final class ActorSystem {
     private final Logger log = Logger.getLogger(ActorSystem.class.getName());
-
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final int BATCH_SIZE = 10;
     private final Map<String, Actor> actorRegistry = new ConcurrentHashMap<>();
-    private final AtomicBoolean isStopped = new AtomicBoolean(false);
+    private volatile boolean isStopped = false;
 
-
-    public <M> Actor<M> create(Behavior<M> behavior) {
-        return _createActor(behavior, 0);
+    public <T, R> Actor<T, R> create(Action<T, R> action) {
+        return _createActor(action, 0);
     }
 
-    public <M> Actor<M> create(Behavior<M> behavior, int actorMessageQueueSize) {
+    public <T, R> Actor<T, R> create(Action<T, R> action, int actorMessageQueueSize) {
+        if(isStopped)
+            throw new DeadException("Shuting down actor system");
+
         if(actorMessageQueueSize <= 0)
             throw new IllegalArgumentException("Specified actor message queue must be greater then 0.");
 
-        return _createActor(behavior, actorMessageQueueSize);
+        return _createActor(action, actorMessageQueueSize);
     }
 
-    private <M> Actor<M> _createActor(Behavior<M> behavior, int actorMessageQueueSize) {
+    private <T, R> Actor<T, R> _createActor(Action<T, R> behavior, int actorMessageQueueSize) {
         String actorId = generateActorId();
-        Actor<M> actor =  new Actor<M>(behavior, actorId, actorMessageQueueSize);
+        Actor<T, R> actor =  new Actor<T, R>(behavior, actorId, actorMessageQueueSize, executorService, BATCH_SIZE);
         actorRegistry.put(actorId, actor);
         return actor;
     }
@@ -39,26 +44,26 @@ public final class ActorSystem {
         return "actor-" + UUID.randomUUID();
     }
 
-    public <M> Actor<M> createAndStart(Behavior<M> behavior) {
-        Actor<M> a = create(behavior);
-        new Thread(a).start();
-        return a;
-    }
-
     /**
      * Stop Actor System, it will gracefully stop all actors
      */
     public void stop(){
-        if(isStopped.get()){
+        if(isStopped){
             log.log(Level.WARNING, "Shutdown is already in progress.");
         }
 
         log.log(Level.INFO, "Shutting down actor system.");
-        isStopped.compareAndSet(false, true);
+        isStopped =  true;
         shutdownActors();
     }
 
     private void shutdownActors() {
-        //TODO
+        for(Actor actor : actorRegistry.values()){
+            try {
+                actor.close();
+            } catch (Exception ex){
+                ex.printStackTrace();
+            }
+        }
     }
 }
