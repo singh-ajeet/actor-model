@@ -1,7 +1,7 @@
 package org.ajeet.learnings.actor;
 
 import org.ajeet.learnings.actor.commons.DeadException;
-import org.ajeet.learnings.actor.commons.Tuple;
+import org.ajeet.learnings.actor.mailbox.Mailbox;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -83,5 +83,19 @@ public final class Actor<T, R> {
     public void close(){
         LOG.log(Level.INFO, "Shutting down " + this);
         isStopped = true;
+    }
+
+    static final class Tuple<T, R> {
+        public final Message<T> message;
+        public final Consumer<R> consumer;
+
+        public Tuple(Message<T> message, Consumer<R> consumer) {
+            this.message = message;
+            this.consumer = consumer;
+        }
+
+        public void consume(R result){
+            consumer.accept(result);
+        }
     }
 }

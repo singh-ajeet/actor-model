@@ -1,6 +1,7 @@
 package org.ajeet.learnings.actor;
 
-import org.ajeet.learnings.actor.commons.Tuple;
+import org.ajeet.learnings.actor.mailbox.FIFOMailbox;
+import org.ajeet.learnings.actor.mailbox.Mailbox;
 
 import java.util.Map;
 import java.util.UUID;
@@ -60,7 +61,7 @@ public final class ActorSystem {
         private final Action<T, R> action;
         private int messageBatchSize;
 
-        private Mailbox<Tuple<T, R>> mailbox;
+        private Mailbox<Actor.Tuple<T, R>> mailbox;
         private String actorId;
 
         private ActorBuilder(ActorSystem actorSystem, Action<T, R> action) {
@@ -76,7 +77,7 @@ public final class ActorSystem {
             return this;
         }
 
-        public ActorBuilder<T, R> withMailBox(Mailbox<Tuple<T, R>> mailbox){
+        public ActorBuilder<T, R> withMailBox(Mailbox<Actor.Tuple<T, R>> mailbox){
             this.mailbox  = mailbox;
             return this;
         }
@@ -88,7 +89,7 @@ public final class ActorSystem {
 
         public Actor<T, R> build(){
             if(mailbox == null)
-                mailbox = new FIFOMailbox<Tuple<T, R>>();
+                mailbox = new FIFOMailbox<Actor.Tuple<T, R>>();
 
             if(actorId == null )
                 actorId = generateActorId();

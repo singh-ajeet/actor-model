@@ -1,11 +1,11 @@
-package org.ajeet.learnings.actor;
+package org.ajeet.learnings.actor.mailbox;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * This is a First In First Ourt based implementation of MailBox
+ * This is a First In First Out approach based implementation of MailBox
  */
 public class FIFOMailbox<Msg> implements Mailbox<Msg> {
     private final BlockingQueue<Msg> queue;

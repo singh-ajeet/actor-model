@@ -2,11 +2,14 @@ package org.ajeet.learnings.actor;
 
 import org.ajeet.learnings.actor.commons.DeadException;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ActorTester {
     private static ActorSystem actorSystem;
@@ -46,8 +49,8 @@ public class ActorTester {
         CompletableFuture<Integer> future1 = actor.send(new Message<>(actor.actorId, "Something"));
         CompletableFuture<Integer> future2 = actor.send(new Message<>(actor.actorId, "Someone"));
 
-        Assertions.assertEquals(9, future1.get());
-        Assertions.assertEquals(7, future2.get());
+        assertEquals(9, future1.get());
+        assertEquals(7, future2.get());
     }
 
     @Test
@@ -74,7 +77,7 @@ public class ActorTester {
         CompletableFuture<Void> future1 = actor.send(new Message<>(actor.actorId, "Something"));
         CompletableFuture<Void> future2 = actor.send(new Message<>(actor.actorId, "Someone"));
 
-        Assertions.assertNull(future1.get());
-        Assertions.assertNull(future2.get());
+        assertNull(future1.get());
+        assertNull(future2.get());
     }
 }
