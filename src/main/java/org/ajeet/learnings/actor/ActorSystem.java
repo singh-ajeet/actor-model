@@ -31,7 +31,7 @@ public final class ActorSystem {
     /**
      * Stop Actor System, it will gracefully stop all actors
      */
-    public void stop(){
+    public void shutdown(){
         if(isStopped){
             log.log(Level.WARNING, "Shutdown is already in progress.");
         }

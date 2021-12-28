@@ -17,11 +17,12 @@ public class ActorTester {
     @BeforeAll
     public static void setup() {
         actorSystem = new ActorSystem(10);
+      //  actorSystem = new ActorSystem(Executors.newFixedThreadPool(10));
     }
 
     @AfterAll
     public static void cleanup(){
-        actorSystem.stop();
+        actorSystem.shutdown();
     }
 
     @Test

@@ -19,7 +19,7 @@ public final class Actor<T, R> {
     private final int batchSize;
 
     private volatile boolean isStopped = false;
-    private State state;
+    private volatile State state;
 
     Actor(Action<T, R> action,
           String actorId,
@@ -36,17 +36,18 @@ public final class Actor<T, R> {
     }
 
     public CompletableFuture<R> send(Message<T> msg) throws DeadException {
-        if (isStopped) {
-            throw new DeadException("Shutting down actor system");
+        if (isDead()) {
+            throw new DeadException("Shutting down actor.");
         }
 
         CompletableFuture<R> future = new CompletableFuture<>();
-        Runnable runnable = () -> {
-            int size = queue.getSize();
 
-            Consumer<R> consumer = result -> future.complete(result);
-            Tuple<T, R> tuple = new Tuple(msg, consumer);
+        Runnable runnable = () -> {
+            Tuple<T, R> tuple = Tuple.of(msg, future);
+
+            int size = queue.getSize();
             queue.add(tuple);
+            
             if (size == 0)
                 processMessage();
         };
@@ -54,15 +55,24 @@ public final class Actor<T, R> {
         return future;
     }
 
+    public boolean isDead() {
+        return isStopped || State.DEAD.equals(state);
+    }
+
     private void processMessage() {
         int processed = 0;
         while(queue.getSize() > 0){
+            if (isDead()) {
+                throw new DeadException("Shutting down actor.");
+            }
+
+            Tuple<T, R> tuple = queue.remove();
             try {
-                Tuple<T, R> tuple = queue.remove();
                 R result = action.onMessage(tuple.message);
-                tuple.consume(result);
+                tuple.resultFuture.complete(result);
             } catch (Exception ex){
                 action.onException(ex);
+                tuple.resultFuture.completeExceptionally(ex);
             }
             processed++;
             // If processed message are exceeding required quota then break it
@@ -80,22 +90,26 @@ public final class Actor<T, R> {
         return "Actor {" + "actorId='" + actorId + '}';
     }
 
-    public void close(){
+    public synchronized void close(){
+        if(isStopped || State.DEAD.equals(state))
+            throw new DeadException("Actor is already dead");
+
         LOG.log(Level.INFO, "Shutting down " + this);
         isStopped = true;
+        state = State.DEAD;
     }
 
     static final class Tuple<T, R> {
-        public final Message<T> message;
-        public final Consumer<R> consumer;
+        final Message<T> message;
+        final CompletableFuture<R> resultFuture;
 
-        public Tuple(Message<T> message, Consumer<R> consumer) {
+        private Tuple(Message<T> message, CompletableFuture<R> resultFuture) {
             this.message = message;
-            this.consumer = consumer;
+            this.resultFuture = resultFuture;
         }
 
-        public void consume(R result){
-            consumer.accept(result);
+        static <T, R> Tuple of(Message<T> message, CompletableFuture<R> resultFuture) {
+            return new Tuple(message, resultFuture);
         }
     }
 }
